@@ -1,6 +1,6 @@
 import argparse
 
-parser = argparse.ArgumentParser(description="password generator v0.2",epilog="[Example] passhash.py -f users.txt -o passlist.txt -c $$$,&&&",)
+parser = argparse.ArgumentParser(description="password generator v0.2",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
 parser.add_argument("-f", "--file", required=True, help="Input file that has usernames")
 parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
 parser.add_argument("-n", "--number", help="Use extra number", default=None)
