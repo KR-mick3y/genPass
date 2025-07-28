@@ -3,7 +3,7 @@ import argparse
 
 # 인자 핸들링
 def getArgs():
-    parser = argparse.ArgumentParser(description="password generator v0.3 - Copyright 2025 All rights reserved by mick3y",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
+    parser = argparse.ArgumentParser(description="password generator v0.3",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
     parser.add_argument("-f", "--file", required=True, help="Input file that has usernames", default=None)
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save", default=None)
     parser.add_argument("-n", "--number", help="Use extra number", default=None)
@@ -229,7 +229,7 @@ def main():
     # 완성된 목록을 파일로 저장
     with open(output, 'w') as file:
         file.write("\n".join(finalWordlist))
-
+    print(f'[*] password generator v0.3 - Copyright 2025 All rights reserved by mick3y')
     print(f'[+] Success generating username list')
     print(f'[+] output file : {output}')
 
