@@ -3,7 +3,7 @@ import argparse
 
 # 인자 핸들링
 def getArgs():
-    parser = argparse.ArgumentParser(description="password generator v0.4",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
+    parser = argparse.ArgumentParser(description="password generator v0.4.1",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
     parser.add_argument("-f", "--file", required=True, help="Input file that has usernames", default=None)
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save", default=None)
     parser.add_argument("-n", "--number", help="Use extra number", default=None)
@@ -18,39 +18,89 @@ def getArgs():
 
 
 # 워드리스트에 숫자/특수문자 패턴 추가
-def addExtPattern(wordlist, extNumber):
-    charactors  = [
-                    '!',    '@',    '#',    '!!',   '@@',   '##',   '!@', 
-                    '!@#',  '@#',   '^^',   '~~',   '%',    '%%',   '$',
-                    '$$'
-                  ]
+def addPattern(wordlist, extNumber):
+
+    # 숫자 패턴
     digits      = [
                     '1234', '1324', '123',  '12',   '11',   '1',    '2',
                   ]
     
+    # 특수문자 패턴
+    charactors  = [
+                '!',    '@',    '#',    '!!',   '@@',   '##',   '!@',
+                '!@#',  '@#',   '^^',   '~~',   '%',    '%%',   '_',
+                '*',    '**',   '$',    '$$',   '+',    '!^'
+                  ]
+
+
+    
     if extNumber is not None:
         digits.append(extNumber)
 
-    charAndDigits = []
-    digitsAndChar = []
     result = []
 
-    # 특수문자 + 숫자 조합 생성
+    # 문자 + 특수문자 + 숫자 조합 생성
+    temp = []
     for char in charactors:
         for digit in digits:
-            charAndDigits.append(char + digit)
+            temp.append(char + digit)
+    for item in temp:
+        for word in wordlist:
+            result.append(word + item)
 
-    # 숫자 + 특수문자 조합 생성
+
+    # 문자 + 숫자 + 특수문자 조합 생성
+    temp = []
     for digit in digits:
         for char in charactors:
-            digitsAndChar.append(digit + char)
+            temp.append(digit + char)
+    for item in temp:
+        for word in wordlist:
+            result.append(word + item)
+
+
+    # 특수문자 + 숫자 + 문자 조합 생성
+    temp = []
+    for char in charactors:
+        for digit in digits:
+            temp.append(char + digit)
+    for item in temp:
+        for word in wordlist:
+            result.append(item + word)
+
+
+    # 특수문자 + 문자 + 숫자 조합 생성
+    temp = []
+    for char in charactors:
+        for word in wordlist:
+            temp.append(char + word)
+
+    for item in temp:
+        for digit in digits:
+            result.append(item + digit)
+
+    # 숫자 + 문자 + 특수문자 조합 생성
+    temp = []
+    for digit in digits:
+        for word in wordlist:
+            temp.append(digit + word)
+
+    for item in temp:
+        for char in charactors:
+            result.append(item + char)
+
+    # 숫자 + 특수문자 + 문자 조합 생성
+    temp = []
+    for digit in digits:
+        for char in charactors:
+            temp.append(digit + char)
+    for item in temp:
+        for word in wordlist:
+            result.append(item + word)
+
 
     # 생성한 두가지 조합 리스트를 인자로 전달된 리스트와 결합
-    exts = charAndDigits + digitsAndChar
-    for word in wordlist:
-        for ext in exts:
-            result.append(word + ext)
-    
+
     return result
 
 
@@ -165,7 +215,7 @@ def makePasswordList(list):
     return result
 
 
-# 사용자가 추가한 문자를 리스트로 생성
+# 사용자가 -c 옵션을 통해 추가한 문자를 리스트로 생성
 def makeExtCharWordlist(extChar, extNumber=None):
 
     # 특수문자 패턴
@@ -219,8 +269,8 @@ def makeExtCharWordlist(extChar, extNumber=None):
     for char in charactors:
         for token in tokens:
             temp.append(char + token)
-            temp.append(char.upper() + token)
-            temp.append(char.capitalize() + token)
+            temp.append(char + token.upper())
+            temp.append(char + token.capitalize())
     for item in temp:
         for digit in digits:
             result.append(item + digit)
@@ -230,11 +280,11 @@ def makeExtCharWordlist(extChar, extNumber=None):
     for char in charactors:
         for digit in digits:
             temp.append(char + digit)
-            temp.append(char.upper() + digit)
-            temp.append(char.capitalize() + digit)
     for item in temp:
         for token in tokens:
             result.append(item + token)
+            result.append(item + token.upper())
+            result.append(item + token.capitalize())
 
     # 숫자 + 문자 + 특수문자 조합 생성
     temp = []
@@ -252,11 +302,11 @@ def makeExtCharWordlist(extChar, extNumber=None):
     for digit in digits:
         for char in charactors:
             temp.append(digit + char)
-            temp.append(digit + char.upper())
-            temp.append(digit + char.capitalize())
     for item in temp:
         for token in tokens:
             result.append(item + token)
+            result.append(item + token.upper())
+            result.append(item + token.capitalize())
 
     return result
 
@@ -278,7 +328,7 @@ def main():
         wordlist.extend(makePasswordList(part))
 
     # 워드리스트에 더할 숫자와 특수문자 추가
-    addedWordlist = addExtPattern(wordlist, extNumber)
+    addedWordlist = addPattern(wordlist, extNumber)
 
     # 자주 사용되는 패스워드 목록
     easyPasswords = [
@@ -289,13 +339,16 @@ def main():
         ]
     
     # 사용자가 추가로 지정한 회사 이름 등의 문자열 리스트 생성
-    extCharList = makeExtCharWordlist(extChar, extNumber)
-    finalWordlist = addedWordlist + easyPasswords + extCharList
+    if extChar is not None:
+        extCharList = makeExtCharWordlist(extChar, extNumber)
+        finalWordlist = addedWordlist + easyPasswords + extCharList
+    else:
+        finalWordlist = addedWordlist + easyPasswords
 
     # 완성된 목록을 파일로 저장
     with open(output, 'w') as file:
         file.write("\n".join(finalWordlist))
-    print(f'[*] password generator v0.4 - Copyright 2025 All rights reserved by mick3y')
+    print(f'[*] password generator v0.4.1 - Copyright 2025 All rights reserved by mick3y')
     print(f'[+] Success generating username list')
     print(f'[+] output file : {output}')
 
