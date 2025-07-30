@@ -1,5 +1,5 @@
 import argparse
-
+import sys
 
 # 인자 핸들링
 def getArgs():
@@ -7,7 +7,7 @@ def getArgs():
     parser.add_argument("-f", "--file", required=True, help="Input file that has usernames", default=None)
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save", default=None)
     parser.add_argument("-n", "--number", help="Use extra number", default=None)
-    parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra charactor", default=None)
+    parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
     args = parser.parse_args()
 
     input = args.file
@@ -26,7 +26,7 @@ def addPattern(wordlist, extNumber):
                   ]
     
     # 특수문자 패턴
-    charactors  = [
+    characters  = [
                 '!',    '@',    '#',    '!!',   '@@',   '##',   '!@',
                 '!@#',  '@#',   '^^',   '~~',   '%',    '%%',   '_',
                 '*',    '**',   '$',    '$$',   '+',    '!^'
@@ -41,7 +41,7 @@ def addPattern(wordlist, extNumber):
 
     # 문자 + 특수문자 + 숫자 조합 생성
     temp = []
-    for char in charactors:
+    for char in characters:
         for digit in digits:
             temp.append(char + digit)
     for item in temp:
@@ -52,7 +52,7 @@ def addPattern(wordlist, extNumber):
     # 문자 + 숫자 + 특수문자 조합 생성
     temp = []
     for digit in digits:
-        for char in charactors:
+        for char in characters:
             temp.append(digit + char)
     for item in temp:
         for word in wordlist:
@@ -61,7 +61,7 @@ def addPattern(wordlist, extNumber):
 
     # 특수문자 + 숫자 + 문자 조합 생성
     temp = []
-    for char in charactors:
+    for char in characters:
         for digit in digits:
             temp.append(char + digit)
     for item in temp:
@@ -71,7 +71,7 @@ def addPattern(wordlist, extNumber):
 
     # 특수문자 + 문자 + 숫자 조합 생성
     temp = []
-    for char in charactors:
+    for char in characters:
         for word in wordlist:
             temp.append(char + word)
 
@@ -86,13 +86,13 @@ def addPattern(wordlist, extNumber):
             temp.append(digit + word)
 
     for item in temp:
-        for char in charactors:
+        for char in characters:
             result.append(item + char)
 
     # 숫자 + 특수문자 + 문자 조합 생성
     temp = []
     for digit in digits:
-        for char in charactors:
+        for char in characters:
             temp.append(digit + char)
     for item in temp:
         for word in wordlist:
@@ -109,10 +109,10 @@ def checkOptions(input, output, extNumber, extChar):
     # input / output은 필수적으로 들어가야함
     if input is None:
         print("[-] This tool expects a username file, but you missed the '-f' flag.")
-        exit()
+        sys.exit(1)
     if output is None:
         print("[-] This tool expects making output file, but you missed the '-o' flag.")
-        exit()
+        sys.exit(1)
 
     # input 파일에 공백 기준 문자열이 6개 미만이면 종료
     with open(input, 'r') as file:
@@ -130,7 +130,7 @@ def checkOptions(input, output, extNumber, extChar):
                     continue
             if intCnt >= 1:
                 print(f'[-] This tool requires four or six string arguments in {input}.')
-                exit()
+                sys.exit(1)
         
         elif len(userInputFile[idx]) == 6:
             intCnt = 0
@@ -142,10 +142,10 @@ def checkOptions(input, output, extNumber, extChar):
                     continue
             if intCnt >= 1:
                 print(f'[-] This tool requires four or six string arguments in {input}.')
-                exit()
+                sys.exit(1)
         else:
             print(f'[-] This tool requires four or six string arguments in {input}.')
-            exit()
+            sys.exit(1)
 
 # 사용자가 입력한 input 파일을 읽어 공백 기준으로 리스트로 생성
 def splitName(path):
@@ -210,7 +210,7 @@ def makePasswordList(list):
     else:
         print('[-] It must require four or six arguments for generating')
         print(list)
-        exit()
+        sys.exit(1)
 
     return result
 
@@ -219,7 +219,7 @@ def makePasswordList(list):
 def makeExtCharWordlist(extChar, extNumber=None):
 
     # 특수문자 패턴
-    charactors  = [
+    characters  = [
                 '!',    '@',    '#',    '!!',   '@@',   '##',   '!@',
                 '!@#',  '@#',   '^^',   '~~',   '%',    '%%',   '_',
                 '*',    '**',   '$',    '$$',   '+',    '!^'
@@ -250,13 +250,13 @@ def makeExtCharWordlist(extChar, extNumber=None):
             temp.append(token.upper() + digit)
             temp.append(token.capitalize() + digit)
     for item in temp:
-        for char in charactors:
+        for char in characters:
             result.append(item + char)
 
     # 문자 + 특수문자 + 숫자 조합 생성
     temp = []
     for token in tokens:
-        for char in charactors:
+        for char in characters:
             temp.append(token + char)
             temp.append(token.upper() + char)
             temp.append(token.capitalize() + char)
@@ -266,7 +266,7 @@ def makeExtCharWordlist(extChar, extNumber=None):
 
     # 특수문자 + 문자 + 숫자 조합 생성
     temp = []
-    for char in charactors:
+    for char in characters:
         for token in tokens:
             temp.append(char + token)
             temp.append(char + token.upper())
@@ -277,7 +277,7 @@ def makeExtCharWordlist(extChar, extNumber=None):
     
     # 특수문자 + 숫자 + 문자 조합 생성
     temp = []
-    for char in charactors:
+    for char in characters:
         for digit in digits:
             temp.append(char + digit)
     for item in temp:
@@ -294,13 +294,13 @@ def makeExtCharWordlist(extChar, extNumber=None):
             temp.append(digit + token.upper())
             temp.append(digit + token.capitalize())
     for item in temp:
-        for char in charactors:
+        for char in characters:
             result.append(item + char)
 
     # 숫자 + 특수문자 + 문자 조합 생성
     temp = []
     for digit in digits:
-        for char in charactors:
+        for char in characters:
             temp.append(digit + char)
     for item in temp:
         for token in tokens:
@@ -334,7 +334,7 @@ def main():
     easyPasswords = [
         'q1w2e3r4',     'qwer1234!',    'password123!',     'Password123!',     '1q2w3e4r', 
         'qwerty123',    '111111',       '12341234',         'qwer!@34',         'qwer12!@',
-        '1q2w3e4r#',    'q1w2e3r4@',    'qwer1234@ ',       '1q2w3e4r!',        '1111',
+        '1q2w3e4r#',    'q1w2e3r4@',    'qwer1234@',       '1q2w3e4r!',        '1111',
         '1234'          
         ]
     
@@ -349,7 +349,7 @@ def main():
     with open(output, 'w') as file:
         file.write("\n".join(finalWordlist))
     print(f'[*] password generator v0.4.1 - Copyright 2025 All rights reserved by mick3y')
-    print(f'[+] Success generating username list')
+    print(f'[+] Success generating user password list')
     print(f'[+] output file : {output}')
 
 if __name__ == "__main__":
