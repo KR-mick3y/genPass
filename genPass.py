@@ -1,11 +1,27 @@
 import argparse
 import sys
 
+# 에러 출력 함수
+def printError(case, filename=None):
+    # -f 플래그 미사용
+    if case == 1:
+        print("[-] This tool requires a input file; you missed the '-f' flag.")
+        sys.exit(1)
+    # -o 플래그 미사용
+    elif case == 2:
+        print("[-] This tool requires an output file; you missed the '-o' flag.")
+        sys.exit(1)
+    # 문자열 인자가 4개 혹은 6개가 아닌 경우
+    elif case == 3:
+        print(f'[-] This tool requires four or six string arguments in {filename}.')
+        sys.exit(1)
+
+
 # 인자 핸들링
 def getArgs():
-    parser = argparse.ArgumentParser(description="password generator v0.4.1",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
-    parser.add_argument("-f", "--file", required=True, help="Input file that has usernames", default=None)
-    parser.add_argument("-o", "--output", required=True, help="Output file you want to save", default=None)
+    parser = argparse.ArgumentParser(description="password generator v0.4.2",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
+    parser.add_argument("-f", "--file", required=True, help="Input file that has usernames")
+    parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
     parser.add_argument("-n", "--number", help="Use extra number", default=None)
     parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
     args = parser.parse_args()
@@ -108,11 +124,9 @@ def addPattern(wordlist, extNumber):
 def checkOptions(input, output, extNumber, extChar):
     # input / output은 필수적으로 들어가야함
     if input is None:
-        print("[-] This tool expects a username file, but you missed the '-f' flag.")
-        sys.exit(1)
+        printError(1)
     if output is None:
-        print("[-] This tool expects making output file, but you missed the '-o' flag.")
-        sys.exit(1)
+        printError(2)
 
     # input 파일에 공백 기준 문자열이 6개 미만이면 종료
     with open(input, 'r') as file:
@@ -129,8 +143,7 @@ def checkOptions(input, output, extNumber, extChar):
                 except ValueError:
                     continue
             if intCnt >= 1:
-                print(f'[-] This tool requires four or six string arguments in {input}.')
-                sys.exit(1)
+                printError(3, input)
         
         elif len(userInputFile[idx]) == 6:
             intCnt = 0
@@ -141,11 +154,9 @@ def checkOptions(input, output, extNumber, extChar):
                 except ValueError:
                     continue
             if intCnt >= 1:
-                print(f'[-] This tool requires four or six string arguments in {input}.')
-                sys.exit(1)
+                printError(3, input)
         else:
-            print(f'[-] This tool requires four or six string arguments in {input}.')
-            sys.exit(1)
+            printError(3)
 
 # 사용자가 입력한 input 파일을 읽어 공백 기준으로 리스트로 생성
 def splitName(path):
@@ -208,9 +219,7 @@ def makePasswordList(list):
             enFirst[0].upper() + enMiddle[0] + enLast[0] # Pyw
         ])
     else:
-        print('[-] It must require four or six arguments for generating')
-        print(list)
-        sys.exit(1)
+        printError(3)
 
     return result
 
@@ -334,8 +343,8 @@ def main():
     easyPasswords = [
         'q1w2e3r4',     'qwer1234!',    'password123!',     'Password123!',     '1q2w3e4r', 
         'qwerty123',    '111111',       '12341234',         'qwer!@34',         'qwer12!@',
-        '1q2w3e4r#',    'q1w2e3r4@',    'qwer1234@',       '1q2w3e4r!',        '1111',
-        '1234'          
+        '1q2w3e4r#',    'q1w2e3r4@',    'qwer1234@',        '1q2w3e4r!',        '1111',
+        '1234',         'asdf1234'          
         ]
     
     # 사용자가 추가로 지정한 회사 이름 등의 문자열 리스트 생성
@@ -348,7 +357,7 @@ def main():
     # 완성된 목록을 파일로 저장
     with open(output, 'w') as file:
         file.write("\n".join(finalWordlist))
-    print(f'[*] password generator v0.4.1 - Copyright 2025 All rights reserved by mick3y')
+    print(f'[*] password generator v0.4.2 - Copyright 2025 All rights reserved by mick3y')
     print(f'[+] Success generating user password list')
     print(f'[+] output file : {output}')
 
