@@ -2,7 +2,7 @@ import argparse
 import sys
 
 # 에러 출력 함수
-def printError(case, filename=None):
+def printError(case, filename):
     # -f 플래그 미사용
     if case == 1:
         print("[-] This tool requires a input file; you missed the '-f' flag.")
@@ -133,9 +133,9 @@ def addPattern(wordlist, extNumber):
 def checkOptions(input, output, extNumber, extChar):
     # input / output은 필수적으로 들어가야함
     if input is None:
-        printError(1)
+        printError(1, input)
     if output is None:
-        printError(2)
+        printError(2, input)
 
     # input 파일에 공백 기준 문자열이 6개 미만이면 종료
     with open(input, 'r') as file:
@@ -165,7 +165,7 @@ def checkOptions(input, output, extNumber, extChar):
             if intCnt >= 1:
                 printError(3, input)
         else:
-            printError(3)
+            printError(3, input)
 
 # 사용자가 입력한 input 파일을 읽어 공백 기준으로 리스트로 생성
 def splitName(path):
@@ -233,7 +233,7 @@ def makePasswordList(list):
             enFirst[0].upper() + enMiddle[0] + enLast[0] # Pyw
         ])
     else:
-        printError(3)
+        printError(3, input)
 
     return result
 
