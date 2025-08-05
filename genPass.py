@@ -19,7 +19,7 @@ def printError(case, filename=None):
 
 # 인자 핸들링
 def getArgs():
-    parser = argparse.ArgumentParser(description="password generator v0.4.2",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
+    parser = argparse.ArgumentParser(description="password generator v0.4.3",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
     parser.add_argument("-f", "--file", required=True, help="Input file that has usernames")
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
     parser.add_argument("-n", "--number", help="Use extra number", default=None)
@@ -37,16 +37,25 @@ def getArgs():
 def addPattern(wordlist, extNumber):
 
     # 숫자 패턴
-    digits      = [
-                    '1234', '1324', '123',  '12',   '11',   '1',    '2',
-                  ]
+    digits           = [
+                    '1234',  '1324',    '123',   '12',      '11',    '1',       '2',
+                    '1100',  '1004',    '1213',  '123412',  '23',    '34',      '234',
+                    '10',    '100',     '12345'
+                    ]
     
     # 특수문자 패턴
-    characters  = [
-                '!',    '@',    '#',    '!!',   '@@',   '##',   '!@',
-                '!@#',  '@#',   '^^',   '~~',   '%',    '%%',   '_',
-                '*',    '**',   '$',    '$$',   '+',    '!^'
-                  ]
+    allCharacters    = [
+                    '!',    '@',    '#',    '$',    '%',    '^',
+                    '&',    '*',    '_',    '-',    '+',    '=',
+                    '.',    '(',    ')',    ';',    ':',    '~'
+                    ]
+    characters       = []
+    commonCharacters = ['!@#',  '!@',   '@#',   '!^',   '@#$']
+    for char in allCharacters:
+        characters.append(char)
+        characters.append(char * 2)
+    characters = characters + commonCharacters
+
 
 
     
@@ -199,15 +208,20 @@ def makePasswordList(list):
             enFirst + enMiddle + enLast, # parkyeonwoo
             enFirst.capitalize() + enMiddle + enLast, # Parkyeonwoo
             enFirst.capitalize() + enMiddle.capitalize() + enLast.capitalize(), #ParkYeonWoo
+            koFirst + koMiddle + koLast, # qkrdusdn
+            koFirst.capitalize() + koMiddle + koLast, #Qkrdusdn
+            koFirst.capitalize() + koMiddle.capitalize() + koLast.capitalize(), # QkrDusDn
+            enMiddle + enLast, # yeonwoo
+            enMiddle.capitalize() + enLast, # Yeonwoo
+            koMiddle + koLast, # dusdn
+            koMiddle.capitalize() + koLast, # Dusdn
+            koMiddle.upper() + koLast, # DUSdn
             enFirst, # park
             enFirst.capitalize(), # Park
             enMiddle, # yeon
             enMiddle.capitalize(), # Yeon
             enLast, # woo
             enLast.capitalize(), # Woo
-            koFirst + koMiddle + koLast, # qkrdusdn
-            koFirst.capitalize() + koMiddle + koLast, #Qkrdusdn
-            koFirst.capitalize() + koMiddle.capitalize() + koLast.capitalize(), # QkrDusDn
             koFirst, # qkr
             koFirst.capitalize(), # Qkr
             koMiddle, # dus
@@ -228,18 +242,25 @@ def makePasswordList(list):
 def makeExtCharWordlist(extChar, extNumber=None):
 
     # 특수문자 패턴
-    characters  = [
-                '!',    '@',    '#',    '!!',   '@@',   '##',   '!@',
-                '!@#',  '@#',   '^^',   '~~',   '%',    '%%',   '_',
-                '*',    '**',   '$',    '$$',   '+',    '!^'
-                  ]
+    allCharacters    = [
+                    '!',    '@',    '#',    '$',    '%',    '^',
+                    '&',    '*',    '_',    '-',    '+',    '=',
+                    '.',    '(',    ')',    ';',    ':',    '~'
+                    ]
+    characters       = []
+    commonCharacters = ['!@#',  '!@',   '@#',   '!^',   '@#$']
+    for char in allCharacters:
+        characters.append(char)
+        characters.append(char * 2)
+    characters = characters + commonCharacters
     
     # 숫자 패턴
     digits      = [
                 '1234',   '1324',     '123',      '12',       '11',
                 '1',      '2',        '2015',     '2016',     '2017',
                 '2018',   '2019',     '2020',     '2021',     '2022',
-                '2023',   '2024',     '2025',     
+                '2023',   '2024',     '2025',     '23',       '234',
+                '34'   
                   ]
     result      = []
 
@@ -357,7 +378,7 @@ def main():
     # 완성된 목록을 파일로 저장
     with open(output, 'w') as file:
         file.write("\n".join(finalWordlist))
-    print(f'[*] password generator v0.4.2 - Copyright 2025 All rights reserved by mick3y')
+    print(f'[*] password generator v0.4.3 - Copyright 2025 All rights reserved by mick3y')
     print(f'[+] Success generating user password list')
     print(f'[+] output file : {output}')
 
