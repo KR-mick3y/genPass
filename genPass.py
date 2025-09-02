@@ -19,10 +19,10 @@ def printError(case, filename):
 
 # 인자 핸들링
 def getArgs():
-    parser = argparse.ArgumentParser(description="password generator v0.4.3",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
+    parser = argparse.ArgumentParser(description="password generator v0.5.0",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
     parser.add_argument("-f", "--file", required=True, help="Input file that has usernames")
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
-    parser.add_argument("-n", "--number", help="Use extra number", default=None)
+    parser.add_argument("-n", "--number", type=lambda s: s.split(','), help="Use extra number", default=None)
     parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
     args = parser.parse_args()
 
@@ -33,7 +33,7 @@ def getArgs():
     return input, output, extNumber, extChar
 
 
-# 워드리스트에 숫자/특수문자 패턴 추가
+# 워드리스트에 숫자/특수문자 패턴 추가 (제너레이터로 변경)
 def addPattern(wordlist, extNumber):
 
     # 숫자 패턴
@@ -42,6 +42,14 @@ def addPattern(wordlist, extNumber):
                     '1100',  '1004',    '1213',  '123412',  '23',    '34',      '234',
                     '10',    '100',     '12345'
                     ]
+    # extNumber가 여러 개인 경우 각 원소를 순서대로 추가
+    if extNumber is not None:
+        if isinstance(extNumber, list):
+            for n in extNumber:
+                if n is not None:
+                    digits.append(str(n))
+        else:
+            digits.append(str(extNumber))
     
     # 특수문자 패턴
     allCharacters    = [
@@ -54,79 +62,68 @@ def addPattern(wordlist, extNumber):
     for char in allCharacters:
         characters.append(char)
         characters.append(char * 2)
+        characters.append(char * 3)
     characters = characters + commonCharacters
 
+    # 문자만
+    for word in wordlist:
+        yield word
 
+    # 문자 + 숫자 조합 생성
+    for word in wordlist:
+        for digit in digits:
+            yield word + digit
 
+    # 숫자 + 문자 조합 생성
+    for digit in digits:
+        for word in wordlist:
+            yield digit + word
     
-    if extNumber is not None:
-        digits.append(extNumber)
-
-    result = []
-
-    # 문자 + 특수문자 + 숫자 조합 생성
-    temp = []
-    for char in characters:
-        for digit in digits:
-            temp.append(char + digit)
-    for item in temp:
-        for word in wordlist:
-            result.append(word + item)
-
-
-    # 문자 + 숫자 + 특수문자 조합 생성
-    temp = []
-    for digit in digits:
+    # 문자 + 특수문자 조합 생성
+    for word in wordlist:
         for char in characters:
-            temp.append(digit + char)
-    for item in temp:
-        for word in wordlist:
-            result.append(word + item)
-
-
-    # 특수문자 + 숫자 + 문자 조합 생성
-    temp = []
-    for char in characters:
-        for digit in digits:
-            temp.append(char + digit)
-    for item in temp:
-        for word in wordlist:
-            result.append(item + word)
-
-
-    # 특수문자 + 문자 + 숫자 조합 생성
-    temp = []
+            yield word + char
+    
+    # 특수문자 + 문자 조합 생성
     for char in characters:
         for word in wordlist:
-            temp.append(char + word)
+            yield char + word
 
-    for item in temp:
+    # 문자 + 특수문자 + 숫자 조합 생성 (w + c + d)
+    for char in characters:
         for digit in digits:
-            result.append(item + digit)
+            for word in wordlist:
+                yield word + char + digit
 
-    # 숫자 + 문자 + 특수문자 조합 생성
-    temp = []
-    for digit in digits:
-        for word in wordlist:
-            temp.append(digit + word)
-
-    for item in temp:
-        for char in characters:
-            result.append(item + char)
-
-    # 숫자 + 특수문자 + 문자 조합 생성
-    temp = []
+    # 문자 + 숫자 + 특수문자 조합 생성 (w + d + c)
     for digit in digits:
         for char in characters:
-            temp.append(digit + char)
-    for item in temp:
+            for word in wordlist:
+                yield word + digit + char
+
+    # 특수문자 + 숫자 + 문자 조합 생성 (c + d + w)
+    for char in characters:
+        for digit in digits:
+            for word in wordlist:
+                yield char + digit + word
+
+    # 특수문자 + 문자 + 숫자 조합 생성 (c + w + d)
+    for char in characters:
         for word in wordlist:
-            result.append(item + word)
+            for digit in digits:
+                yield char + word + digit
 
+    # 숫자 + 문자 + 특수문자 조합 생성 (d + w + c)
+    for digit in digits:
+        for word in wordlist:
+            for char in characters:
+                yield digit + word + char
 
-    # 생성한 두가지 조합 리스트를 인자로 전달된 리스트와 결합
-
-    return result
+    # 숫자 + 특수문자 + 문자 조합 생성 (d + c + w)
+    for digit in digits:
+        for char in characters:
+            for word in wordlist:
+                yield digit + char + word
 
 
 # 사용자가 사용한 인자 검증
@@ -233,12 +230,13 @@ def makePasswordList(list):
             enFirst[0].upper() + enMiddle[0] + enLast[0] # Pyw
         ])
     else:
-        printError(3, input)
+        # 원본은 스코프 밖 input을 참조해 NameError; 안전 문자열로 대체
+        printError(3, "(input)")
 
     return result
 
 
-# 사용자가 -c 옵션을 통해 추가한 문자를 리스트로 생성
+# 사용자가 -c 옵션을 통해 추가한 문자를 리스트로 생성 (제너레이터로 변경)
 def makeExtCharWordlist(extChar, extNumber=None):
 
     # 특수문자 패턴
@@ -252,6 +250,7 @@ def makeExtCharWordlist(extChar, extNumber=None):
     for char in allCharacters:
         characters.append(char)
         characters.append(char * 2)
+        characters.append(char * 3)
     characters = characters + commonCharacters
     
     # 숫자 패턴
@@ -262,83 +261,94 @@ def makeExtCharWordlist(extChar, extNumber=None):
                 '2023',   '2024',     '2025',     '23',       '234',
                 '34'   
                   ]
-    result      = []
-
+    # extNumber가 여러 개인 경우 각 원소를 순서대로 추가
     if extNumber is not None:
-        digits.append(str(extNumber))  
+        if isinstance(extNumber, list):
+            for n in extNumber:
+                if n is not None:
+                    digits.append(str(n))
+        else:
+            digits.append(str(extNumber))
+
     if not extChar:
-        return result
+        return
 
     # extChar가 문자열이든 리스트든 모두 리스트로 통일
     tokens = extChar if isinstance(extChar, list) else [extChar]
 
-    # 문자 + 숫자 + 특수문자 조합 생성
-    temp = []
+    # 문자 + 숫자 조합 생성
     for token in tokens:
         for digit in digits:
-            temp.append(token + digit)
-            temp.append(token.upper() + digit)
-            temp.append(token.capitalize() + digit)
-    for item in temp:
+            yield token + digit
+            yield token.capitalize() + digit
+            yield token.upper() + digit
+
+    # 숫자 + 문자 조합 생성
+    for digit in digits:
+        for token in tokens:
+            yield digit + token
+            yield digit + token.capitalize()
+            yield digit + token.upper()
+    
+    # 문자 + 특수문자 조합 생성
+    for token in tokens:
         for char in characters:
-            result.append(item + char)
+            yield token + char
+            yield token.capitalize() + char
+            yield token.upper() + char
+    
+    # 특수문자 + 문자 조합 생성
+    for char in characters:
+        for token in tokens:
+            yield char + token
+            yield char + token.capitalize()
+            yield char + token.upper()
+
+    # 문자 + 숫자 + 특수문자 조합 생성
+    for token in tokens:
+        for digit in digits:
+            for item in (token + digit, token.upper() + digit, token.capitalize() + digit):
+                for char in characters:
+                    yield item + char
 
     # 문자 + 특수문자 + 숫자 조합 생성
-    temp = []
     for token in tokens:
         for char in characters:
-            temp.append(token + char)
-            temp.append(token.upper() + char)
-            temp.append(token.capitalize() + char)
-    for item in temp:
-        for digit in digits:
-            result.append(item + digit)
+            for item in (token + char, token.upper() + char, token.capitalize() + char):
+                for digit in digits:
+                    yield item + digit
 
     # 특수문자 + 문자 + 숫자 조합 생성
-    temp = []
     for char in characters:
         for token in tokens:
-            temp.append(char + token)
-            temp.append(char + token.upper())
-            temp.append(char + token.capitalize())
-    for item in temp:
-        for digit in digits:
-            result.append(item + digit)
+            for item in (char + token, char + token.upper(), char + token.capitalize()):
+                for digit in digits:
+                    yield item + digit
     
     # 특수문자 + 숫자 + 문자 조합 생성
-    temp = []
     for char in characters:
         for digit in digits:
-            temp.append(char + digit)
-    for item in temp:
-        for token in tokens:
-            result.append(item + token)
-            result.append(item + token.upper())
-            result.append(item + token.capitalize())
+            item = char + digit
+            for token in tokens:
+                yield item + token
+                yield item + token.upper()
+                yield item + token.capitalize()
 
     # 숫자 + 문자 + 특수문자 조합 생성
-    temp = []
     for digit in digits:
         for token in tokens:
-            temp.append(digit + token)
-            temp.append(digit + token.upper())
-            temp.append(digit + token.capitalize())
-    for item in temp:
-        for char in characters:
-            result.append(item + char)
+            for item in (digit + token, digit + token.upper(), digit + token.capitalize()):
+                for char in characters:
+                    yield item + char
 
     # 숫자 + 특수문자 + 문자 조합 생성
-    temp = []
     for digit in digits:
         for char in characters:
-            temp.append(digit + char)
-    for item in temp:
-        for token in tokens:
-            result.append(item + token)
-            result.append(item + token.upper())
-            result.append(item + token.capitalize())
-
-    return result
+            item = digit + char
+            for token in tokens:
+                yield item + token
+                yield item + token.upper()
+                yield item + token.capitalize()
 
 
 def main():
@@ -357,28 +367,40 @@ def main():
     for part in splitNameList:
         wordlist.extend(makePasswordList(part))
 
-    # 워드리스트에 더할 숫자와 특수문자 추가
-    addedWordlist = addPattern(wordlist, extNumber)
-
     # 자주 사용되는 패스워드 목록
     easyPasswords = [
         'q1w2e3r4',     'qwer1234!',    'password123!',     'Password123!',     '1q2w3e4r', 
         'qwerty123',    '111111',       '12341234',         'qwer!@34',         'qwer12!@',
         '1q2w3e4r#',    'q1w2e3r4@',    'qwer1234@',        '1q2w3e4r!',        '1111',
-        '1234',         'asdf1234'          
+        '1234',         'asdf1234',     '1q2w3e',           'q1w2e3',           '12345'       
         ]
-    
-    # 사용자가 추가로 지정한 회사 이름 등의 문자열 리스트 생성
-    if extChar is not None:
-        extCharList = makeExtCharWordlist(extChar, extNumber)
-        finalWordlist = addedWordlist + easyPasswords + extCharList
-    else:
-        finalWordlist = addedWordlist + easyPasswords
 
-    # 완성된 목록을 파일로 저장
+    # 완성된 목록을 파일로 스트리밍 저장 (마지막 줄 개행 없음)
     with open(output, 'w') as file:
-        file.write("\n".join(finalWordlist))
-    print(f'[*] password generator v0.4.3 - Copyright 2025 All rights reserved by mick3y')
+        first = True
+        def _write_line(s):
+            nonlocal first
+            if first:
+                file.write(s)
+                first = False
+            else:
+                file.write("\n")
+                file.write(s)
+
+        # 워드리스트에 더할 숫자와 특수문자 추가(스트리밍)
+        for pw in addPattern(wordlist, extNumber):
+            _write_line(pw)
+
+        # easyPasswords 스트리밍
+        for pw in easyPasswords:
+            _write_line(pw)
+        
+        # 사용자가 추가로 지정한 회사 이름 등의 문자열 리스트 생성(스트리밍)
+        if extChar is not None:
+            for pw in makeExtCharWordlist(extChar, extNumber):
+                _write_line(pw)
+
+    print(f'[*] password generator v0.5.0 - Copyright 2025 All rights reserved by mick3y')
     print(f'[+] Success generating user password list')
     print(f'[+] output file : {output}')
 
