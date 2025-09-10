@@ -20,7 +20,7 @@ def printError(case, filename):
 # 인자 핸들링
 def getArgs():
     parser = argparse.ArgumentParser(description="password generator v0.5.0",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
-    parser.add_argument("-f", "--file", required=True, help="Input file that has usernames")
+    parser.add_argument("-f", "--file", required=False, help="Input file that has usernames", default=None)
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
     parser.add_argument("-n", "--number", type=lambda s: s.split(','), help="Use extra number", default=None)
     parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
@@ -128,16 +128,19 @@ def addPattern(wordlist, extNumber):
 
 # 사용자가 사용한 인자 검증
 def checkOptions(input, output, extNumber, extChar):
-    # input / output은 필수적으로 들어가야함
-    if input is None:
+    # input 또는 extChar 중 하나는 필수적으로 들어가야함
+    if input is None and extChar is None:
         printError(1, input)
     if output is None:
         printError(2, input)
 
+    if input is None:
+        return
+
     # input 파일에 공백 기준 문자열이 6개 미만이면 종료
     with open(input, 'r') as file:
         userInputFile = [line.strip().split() for line in file.readlines()]
-        
+
     for idx in range(len(userInputFile)):
 
         if len(userInputFile[idx]) == 4:
@@ -150,7 +153,7 @@ def checkOptions(input, output, extNumber, extChar):
                     continue
             if intCnt >= 1:
                 printError(3, input)
-        
+
         elif len(userInputFile[idx]) == 6:
             intCnt = 0
             for item in userInputFile[idx]:
@@ -276,6 +279,12 @@ def makeExtCharWordlist(extChar, extNumber=None):
     # extChar가 문자열이든 리스트든 모두 리스트로 통일
     tokens = extChar if isinstance(extChar, list) else [extChar]
 
+    # 문자만
+    for token in tokens:
+        yield token
+        yield token.capitalize()
+        yield token.upper()
+
     # 문자 + 숫자 조합 생성
     for token in tokens:
         for digit in digits:
@@ -360,12 +369,13 @@ def main():
     checkOptions(input, output, extNumber, extChar)
 
     # 사용자가 인자로 넣은 파일에서 공백을 기준으로 리스트 생성
-    splitNameList = splitName(input) 
-
-    # 생성한 리스트를 기반으로 기본 워드리스트 양식 생성
     wordlist = []
-    for part in splitNameList:
-        wordlist.extend(makePasswordList(part))
+    if input is not None:
+        splitNameList = splitName(input)
+
+        # 생성한 리스트를 기반으로 기본 워드리스트 양식 생성
+        for part in splitNameList:
+            wordlist.extend(makePasswordList(part))
 
     # 자주 사용되는 패스워드 목록
     easyPasswords = [
