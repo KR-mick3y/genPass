@@ -20,7 +20,8 @@ def printError(case, filename):
 # 인자 핸들링
 def getArgs():
     parser = argparse.ArgumentParser(description="password generator v0.5.0",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
-    parser.add_argument("-f", "--file", required=True, help="Input file that has usernames")
+    # (변경) -f는 선택값으로 변경하여 -c만으로도 동작 가능
+    parser.add_argument("-f", "--file", required=False, help="Input file that has usernames")
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
     parser.add_argument("-n", "--number", type=lambda s: s.split(','), help="Use extra number", default=None)
     parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
@@ -128,41 +129,43 @@ def addPattern(wordlist, extNumber):
 
 # 사용자가 사용한 인자 검증
 def checkOptions(input, output, extNumber, extChar):
-    # input / output은 필수적으로 들어가야함
-    if input is None:
+    # (추가) -f / -c 둘 다 없는 경우 기존처럼 -f 누락 에러 처리
+    if input is None and (extChar is None or len(extChar) == 0):
         printError(1, input)
+    # output은 필수
     if output is None:
         printError(2, input)
 
-    # input 파일에 공백 기준 문자열이 6개 미만이면 종료
-    with open(input, 'r') as file:
-        userInputFile = [line.strip().split() for line in file.readlines()]
+    # input 파일이 있는 경우에만 파일 포맷 검증
+    if input is not None:
+        with open(input, 'r') as file:
+            userInputFile = [line.strip().split() for line in file.readlines()]
         
-    for idx in range(len(userInputFile)):
+        for idx in range(len(userInputFile)):
 
-        if len(userInputFile[idx]) == 4:
-            intCnt = 0
-            for item in userInputFile[idx]:
-                try:
-                    int(item)
-                    intCnt += 1
-                except ValueError:
-                    continue
-            if intCnt >= 1:
+            if len(userInputFile[idx]) == 4:
+                intCnt = 0
+                for item in userInputFile[idx]:
+                    try:
+                        int(item)
+                        intCnt += 1
+                    except ValueError:
+                        continue
+                if intCnt >= 1:
+                    printError(3, input)
+            
+            elif len(userInputFile[idx]) == 6:
+                intCnt = 0
+                for item in userInputFile[idx]:
+                    try:
+                        int(item)
+                        intCnt += 1
+                    except ValueError:
+                        continue
+                if intCnt >= 1:
+                    printError(3, input)
+            else:
                 printError(3, input)
-        
-        elif len(userInputFile[idx]) == 6:
-            intCnt = 0
-            for item in userInputFile[idx]:
-                try:
-                    int(item)
-                    intCnt += 1
-                except ValueError:
-                    continue
-            if intCnt >= 1:
-                printError(3, input)
-        else:
-            printError(3, input)
 
 # 사용자가 입력한 input 파일을 읽어 공백 기준으로 리스트로 생성
 def splitName(path):
@@ -360,7 +363,7 @@ def main():
     checkOptions(input, output, extNumber, extChar)
 
     # 사용자가 인자로 넣은 파일에서 공백을 기준으로 리스트 생성
-    splitNameList = splitName(input) 
+    splitNameList = splitName(input) if input is not None else []
 
     # 생성한 리스트를 기반으로 기본 워드리스트 양식 생성
     wordlist = []
@@ -397,6 +400,12 @@ def main():
         
         # 사용자가 추가로 지정한 회사 이름 등의 문자열 리스트 생성(스트리밍)
         if extChar is not None:
+            tokens = extChar if isinstance(extChar, list) else [extChar]
+            # (추가) 토큰 자체(원형/대문자/첫글자 대문자)도 포함
+            for token in tokens:
+                _write_line(token)
+                _write_line(token.upper())
+                _write_line(token.capitalize())
             for pw in makeExtCharWordlist(extChar, extNumber):
                 _write_line(pw)
 
