@@ -3,9 +3,9 @@ import sys
 
 # 에러 출력 함수
 def printError(case, filename):
-    # -f 플래그 미사용
+    # -f, -c 플래그 미사용
     if case == 1:
-        print("[-] This tool requires a input file; you missed the '-f' flag.")
+        print("[-] This tool requires a input file or characters; you missed the '-f' or '-c' flag.")
         sys.exit(1)
     # -o 플래그 미사용
     elif case == 2:
