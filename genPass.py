@@ -1,165 +1,151 @@
 import argparse
 import sys
+from collections import OrderedDict
+
+# 특수문자 패턴 (전역)
+allCharacters = [
+    '!', '@', '#', '$', '%', '^',
+    '&', '*', '_', '-', '+', '=',
+    '.', '(', ')', ';', ':', '~'
+]
+characters = []
+commonCharacters = [
+    '!@#', '@#$', '#$%', '$%^', '%^&', '^&*',
+    '!@', '@#', '#$', '$%', '%^', '^&',
+    '#@!', '$#@', '%#$', '^$%', '&^%', '*&^'
+]
+for c in allCharacters:
+    characters.append(c)
+    characters.append(c * 2)
+    characters.append(c * 3)
+characters = characters + commonCharacters  # 구성상 중복 없음
+
+# 이름 기반 기본 숫자 패턴
+base_digits = [
+    '1', '11', '111', '1111', '2', '22', '12', '1212',
+    '123', '123123', '12312', '1234', '1324', '123412',
+    '1100', '1004', '23', '234', '12345', '10', '100'
+]
+
+
+# 순서 보존 중복 제거
+def _unique(seq):
+    seen = set()
+    out = []
+    for x in seq:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
+# 숫자 패턴 정규화
+def _normalize_digits(base, extNumber):
+    digits = list(base)
+    if extNumber is not None:
+        if isinstance(extNumber, list):
+            digits.extend(str(n) for n in extNumber if n is not None)
+        else:
+            digits.append(str(extNumber))
+    return _unique(digits)
+
+# -c 토큰 변형(원형/대문자/첫글자 대문자)
+def _normalize_tokens(extChar):
+    if not extChar:
+        return []
+    tokens = extChar if isinstance(extChar, list) else [extChar]
+    variants = []
+    for t in tokens:
+        for v in (t, t.upper(), t.capitalize()):
+            if v not in variants:
+                variants.append(v)
+    return variants
+
+# 문자(w), 숫자(d), 특수문자(c) 조합 생성
+def _expand(wordlist, digits, include_plain_word):
+    words = _unique(wordlist)
+    digits = _unique(digits)
+
+    # 단어 원문
+    if include_plain_word:
+        for w in words:
+            yield w
+
+    # (w+d), (d+w)
+    for w in words:
+        for d in digits:
+            yield w + d
+            yield d + w
+
+    # (w+c), (c+w)
+    for w in words:
+        for c in characters:
+            yield w + c
+            yield c + w
+
+    # 3요소 6순열: w+d+c, w+c+d, d+w+c, d+c+w, c+w+d, c+d+w
+    for w in words:
+        for d in digits:
+            for c in characters:
+                yield w + d + c
+                yield w + c + d
+                yield d + w + c
+                yield d + c + w
+                yield c + w + d
+                yield c + d + w
+
 
 # 에러 출력 함수
 def printError(case, filename):
-    # -f 플래그 미사용
     if case == 1:
         print("[-] This tool requires a input file; you missed the '-f' flag.")
         sys.exit(1)
-    # -o 플래그 미사용
     elif case == 2:
         print("[-] This tool requires an output file; you missed the '-o' flag.")
         sys.exit(1)
-    # 문자열 인자가 4개 혹은 6개가 아닌 경우
     elif case == 3:
         print(f'[-] This tool requires four or six string arguments in {filename}.')
         sys.exit(1)
 
-
 # 인자 핸들링
 def getArgs():
-    parser = argparse.ArgumentParser(description="password generator v0.5.0",epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",)
-    # (변경) -f는 선택값으로 변경하여 -c만으로도 동작 가능
+    parser = argparse.ArgumentParser(
+        description="password generator v0.5.2",
+        epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",
+    )
     parser.add_argument("-f", "--file", required=False, help="Input file that has usernames")
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
     parser.add_argument("-n", "--number", type=lambda s: s.split(','), help="Use extra number", default=None)
     parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
     args = parser.parse_args()
+    return args.file, args.output, args.number, args.char
 
-    input = args.file
-    output = args.output
-    extNumber = args.number
-    extChar = args.char
-    return input, output, extNumber, extChar
-
-
-# 워드리스트에 숫자/특수문자 패턴 추가 (제너레이터로 변경)
-def addPattern(wordlist, extNumber):
-
-    # 숫자 패턴
-    digits           = [
-                    '1234',  '1324',    '123',   '12',      '11',    '1',       '2',
-                    '1100',  '1004',    '1213',  '123412',  '23',    '34',      '234',
-                    '10',    '100',     '12345'
-                    ]
-    # extNumber가 여러 개인 경우 각 원소를 순서대로 추가
-    if extNumber is not None:
-        if isinstance(extNumber, list):
-            for n in extNumber:
-                if n is not None:
-                    digits.append(str(n))
-        else:
-            digits.append(str(extNumber))
-    
-    # 특수문자 패턴
-    allCharacters    = [
-                    '!',    '@',    '#',    '$',    '%',    '^',
-                    '&',    '*',    '_',    '-',    '+',    '=',
-                    '.',    '(',    ')',    ';',    ':',    '~'
-                    ]
-    characters       = []
-    commonCharacters = ['!@#',  '!@',   '@#',   '!^',   '@#$']
-    for char in allCharacters:
-        characters.append(char)
-        characters.append(char * 2)
-        characters.append(char * 3)
-    characters = characters + commonCharacters
-
-    # 문자만
-    for word in wordlist:
-        yield word
-
-    # 문자 + 숫자 조합 생성
-    for word in wordlist:
-        for digit in digits:
-            yield word + digit
-
-    # 숫자 + 문자 조합 생성
-    for digit in digits:
-        for word in wordlist:
-            yield digit + word
-    
-    # 문자 + 특수문자 조합 생성
-    for word in wordlist:
-        for char in characters:
-            yield word + char
-    
-    # 특수문자 + 문자 조합 생성
-    for char in characters:
-        for word in wordlist:
-            yield char + word
-
-    # 문자 + 특수문자 + 숫자 조합 생성 (w + c + d)
-    for char in characters:
-        for digit in digits:
-            for word in wordlist:
-                yield word + char + digit
-
-    # 문자 + 숫자 + 특수문자 조합 생성 (w + d + c)
-    for digit in digits:
-        for char in characters:
-            for word in wordlist:
-                yield word + digit + char
-
-    # 특수문자 + 숫자 + 문자 조합 생성 (c + d + w)
-    for char in characters:
-        for digit in digits:
-            for word in wordlist:
-                yield char + digit + word
-
-    # 특수문자 + 문자 + 숫자 조합 생성 (c + w + d)
-    for char in characters:
-        for word in wordlist:
-            for digit in digits:
-                yield char + word + digit
-
-    # 숫자 + 문자 + 특수문자 조합 생성 (d + w + c)
-    for digit in digits:
-        for word in wordlist:
-            for char in characters:
-                yield digit + word + char
-
-    # 숫자 + 특수문자 + 문자 조합 생성 (d + c + w)
-    for digit in digits:
-        for char in characters:
-            for word in wordlist:
-                yield digit + char + word
-
-
-# 사용자가 사용한 인자 검증
+# 옵션/입력 검증
 def checkOptions(input, output, extNumber, extChar):
-    # (추가) -f / -c 둘 다 없는 경우 기존처럼 -f 누락 에러 처리
     if input is None and (extChar is None or len(extChar) == 0):
         printError(1, input)
-    # output은 필수
     if output is None:
         printError(2, input)
 
-    # input 파일이 있는 경우에만 파일 포맷 검증
     if input is not None:
         with open(input, 'r') as file:
             userInputFile = [line.strip().split() for line in file.readlines()]
-        
-        for idx in range(len(userInputFile)):
 
+        for idx in range(len(userInputFile)):
             if len(userInputFile[idx]) == 4:
                 intCnt = 0
                 for item in userInputFile[idx]:
                     try:
-                        int(item)
-                        intCnt += 1
+                        int(item); intCnt += 1
                     except ValueError:
                         continue
                 if intCnt >= 1:
                     printError(3, input)
-            
+
             elif len(userInputFile[idx]) == 6:
                 intCnt = 0
                 for item in userInputFile[idx]:
                     try:
-                        int(item)
-                        intCnt += 1
+                        int(item); intCnt += 1
                     except ValueError:
                         continue
                 if intCnt >= 1:
@@ -167,251 +153,162 @@ def checkOptions(input, output, extNumber, extChar):
             else:
                 printError(3, input)
 
-# 사용자가 입력한 input 파일을 읽어 공백 기준으로 리스트로 생성
+# input 파일 파싱
 def splitName(path):
     with open(path, 'r') as file:
-        list = [line.strip().split() for line in file.readlines()]
-    return list
+        lst = [line.strip().split() for line in file.readlines()]
+    return lst
 
-
-# 입력한 input 파일로부터 공백 기준으로 나눠 리스트로 관리한 것을 패스워드 게싱 리스트로 변환
-def makePasswordList(list):
+# 이름 기반 기본 워드리스트 생성
+def makePasswordList(lst):
     result = []
-
-    # 성 + 이름이 2글자 일 때
-    if len(list) == 4:
-        enFirst, enLast = list[0], list[1]
-        koFirst, koLast = list[2], list[3]
-
+    if len(lst) == 4:
+        enFirst, enLast = lst[0], lst[1]
+        koFirst, koLast = lst[2], lst[3]
         result.extend([
-            enFirst + enLast, # yeonwoo
-            enFirst.capitalize() + enLast, # Yeonwoo
-            enFirst.capitalize() + enLast.capitalize(), # YeonWoo
-            koFirst + koLast, # dusdn
-            koFirst.capitalize() + koLast, # Dusdn
-            koFirst.capitalize() + koLast.capitalize(), # DusDn
-            enFirst, # yeon
-            enFirst.capitalize(), # Yeon
-            enLast, # woo
-            enLast.capitalize(), # Woo
-            enFirst[0] + enLast[0], # yw
-            enFirst[0].upper() + enLast[0], # Yw
-            enFirst[0].upper() + enLast[0].upper() # YW
+            enFirst + enLast,
+            enFirst.capitalize() + enLast,
+            enFirst.capitalize() + enLast.capitalize(),
+            koFirst + koLast,
+            koFirst.capitalize() + koLast,
+            koFirst.capitalize() + koLast.capitalize(),
+            enFirst,
+            enFirst.capitalize(),
+            enLast,
+            enLast.capitalize(),
+            enFirst[0] + enLast[0],
+            enFirst[0].upper() + enLast[0],
+            enFirst[0].upper() + enLast[0].upper()
         ])
 
-    # 성 + 이름이 3글자 일 때
-    elif len(list) == 6:
-        enFirst, enMiddle, enLast = list[0], list[1], list[2]
-        koFirst, koMiddle, koLast = list[3], list[4], list[5]
-
+    elif len(lst) == 6:
+        enFirst, enMiddle, enLast = lst[0], lst[1], lst[2]
+        koFirst, koMiddle, koLast = lst[3], lst[4], lst[5]
         result.extend([
-            enFirst + enMiddle + enLast, # parkyeonwoo
-            enFirst.capitalize() + enMiddle + enLast, # Parkyeonwoo
-            enFirst.capitalize() + enMiddle.capitalize() + enLast.capitalize(), #ParkYeonWoo
-            koFirst + koMiddle + koLast, # qkrdusdn
-            koFirst.capitalize() + koMiddle + koLast, #Qkrdusdn
-            koFirst.capitalize() + koMiddle.capitalize() + koLast.capitalize(), # QkrDusDn
-            enMiddle + enLast, # yeonwoo
-            enMiddle.capitalize() + enLast, # Yeonwoo
-            koMiddle + koLast, # dusdn
-            koMiddle.capitalize() + koLast, # Dusdn
-            koMiddle.upper() + koLast, # DUSdn
-            enFirst, # park
-            enFirst.capitalize(), # Park
-            enMiddle, # yeon
-            enMiddle.capitalize(), # Yeon
-            enLast, # woo
-            enLast.capitalize(), # Woo
-            koFirst, # qkr
-            koFirst.capitalize(), # Qkr
-            koMiddle, # dus
-            koMiddle.capitalize(), # Dus
-            koLast, # dn
-            koLast.capitalize(), # Dn
-            enFirst[0] + enMiddle[0] + enLast[0], # pyw
-            enFirst[0].upper() + enMiddle[0].upper() + enLast[0].upper(), # PYW
-            enFirst[0].upper() + enMiddle[0] + enLast[0] # Pyw
+            enFirst + enMiddle + enLast,
+            enFirst.capitalize() + enMiddle + enLast,
+            enFirst.capitalize() + enMiddle.capitalize() + enLast.capitalize(),
+            koFirst + koMiddle + koLast,
+            koFirst.capitalize() + koMiddle + koLast,
+            koFirst.capitalize() + koMiddle.capitalize() + koLast.capitalize(),
+            enMiddle + enLast,
+            enMiddle.capitalize() + enLast,
+            koMiddle + koLast,
+            koMiddle.capitalize() + koLast,
+            koMiddle.upper() + koLast,
+            enFirst,
+            enFirst.capitalize(),
+            enMiddle,
+            enMiddle.capitalize(),
+            enLast,
+            enLast.capitalize(),
+            koFirst,
+            koFirst.capitalize(),
+            koMiddle,
+            koMiddle.capitalize(),
+            koLast,
+            koLast.capitalize(),
+            enFirst[0] + enMiddle[0] + enLast[0],
+            enFirst[0].upper() + enMiddle[0].upper() + enLast[0].upper(),
+            enFirst[0].upper() + enMiddle[0] + enLast[0]
         ])
     else:
-        # 원본은 스코프 밖 input을 참조해 NameError; 안전 문자열로 대체
         printError(3, "(input)")
 
-    return result
+    return _unique(result)
 
+# 워드리스트 + 패턴 (이름 기반)
+def addPattern(wordlist, extNumber):
+    digits = _normalize_digits(base_digits, extNumber)
+    return _expand(wordlist, digits, include_plain_word=True)
 
-# 사용자가 -c 옵션을 통해 추가한 문자를 리스트로 생성 (제너레이터로 변경)
+# 쉬운 패스워드 베이스 + 패턴
+def makeEasyPasswordList(wordlist):
+    digits = [
+        '1', '11', '111', '1111', '2', '22', '222', '12', '1212',
+        '34', '23', '234', '123', '1234', '1324', '1100', '1004', '12345', '10', '100'
+    ]
+    wl = wordlist if isinstance(wordlist, list) else [wordlist]
+    wl = _unique(wl)
+    # easy는 단독 문자열은 제외(조합만)
+    return _expand(wl, digits, include_plain_word=False)
+
+# -c 토큰 + 패턴
 def makeExtCharWordlist(extChar, extNumber=None):
+    digits = [
+        '1', '11', '111', '1111', '2', '22', '222', '12', '1212',
+        '34', '23', '234', '123', '1234', '1324', '1100', '1004', '12345', '10', '100',
+        '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'
+    ]
+    digits = _normalize_digits(digits, extNumber)
+    variants = _normalize_tokens(extChar)
+    # -c도 단독 문자열은 제외(조합만)
+    return _expand(variants, digits, include_plain_word=False)
 
-    # 특수문자 패턴
-    allCharacters    = [
-                    '!',    '@',    '#',    '$',    '%',    '^',
-                    '&',    '*',    '_',    '-',    '+',    '=',
-                    '.',    '(',    ')',    ';',    ':',    '~'
-                    ]
-    characters       = []
-    commonCharacters = ['!@#',  '!@',   '@#',   '!^',   '@#$']
-    for char in allCharacters:
-        characters.append(char)
-        characters.append(char * 2)
-        characters.append(char * 3)
-    characters = characters + commonCharacters
-    
-    # 숫자 패턴
-    digits      = [
-                '1234',   '1324',     '123',      '12',       '11',
-                '1',      '2',        '2015',     '2016',     '2017',
-                '2018',   '2019',     '2020',     '2021',     '2022',
-                '2023',   '2024',     '2025',     '23',       '234',
-                '34'   
-                  ]
-    # extNumber가 여러 개인 경우 각 원소를 순서대로 추가
-    if extNumber is not None:
-        if isinstance(extNumber, list):
-            for n in extNumber:
-                if n is not None:
-                    digits.append(str(n))
-        else:
-            digits.append(str(extNumber))
-
-    if not extChar:
-        return
-
-    # extChar가 문자열이든 리스트든 모두 리스트로 통일
-    tokens = extChar if isinstance(extChar, list) else [extChar]
-
-    # 문자 + 숫자 조합 생성
-    for token in tokens:
-        for digit in digits:
-            yield token + digit
-            yield token.capitalize() + digit
-            yield token.upper() + digit
-
-    # 숫자 + 문자 조합 생성
-    for digit in digits:
-        for token in tokens:
-            yield digit + token
-            yield digit + token.capitalize()
-            yield digit + token.upper()
-    
-    # 문자 + 특수문자 조합 생성
-    for token in tokens:
-        for char in characters:
-            yield token + char
-            yield token.capitalize() + char
-            yield token.upper() + char
-    
-    # 특수문자 + 문자 조합 생성
-    for char in characters:
-        for token in tokens:
-            yield char + token
-            yield char + token.capitalize()
-            yield char + token.upper()
-
-    # 문자 + 숫자 + 특수문자 조합 생성
-    for token in tokens:
-        for digit in digits:
-            for item in (token + digit, token.upper() + digit, token.capitalize() + digit):
-                for char in characters:
-                    yield item + char
-
-    # 문자 + 특수문자 + 숫자 조합 생성
-    for token in tokens:
-        for char in characters:
-            for item in (token + char, token.upper() + char, token.capitalize() + char):
-                for digit in digits:
-                    yield item + digit
-
-    # 특수문자 + 문자 + 숫자 조합 생성
-    for char in characters:
-        for token in tokens:
-            for item in (char + token, char + token.upper(), char + token.capitalize()):
-                for digit in digits:
-                    yield item + digit
-    
-    # 특수문자 + 숫자 + 문자 조합 생성
-    for char in characters:
-        for digit in digits:
-            item = char + digit
-            for token in tokens:
-                yield item + token
-                yield item + token.upper()
-                yield item + token.capitalize()
-
-    # 숫자 + 문자 + 특수문자 조합 생성
-    for digit in digits:
-        for token in tokens:
-            for item in (digit + token, digit + token.upper(), digit + token.capitalize()):
-                for char in characters:
-                    yield item + char
-
-    # 숫자 + 특수문자 + 문자 조합 생성
-    for digit in digits:
-        for char in characters:
-            item = digit + char
-            for token in tokens:
-                yield item + token
-                yield item + token.upper()
-                yield item + token.capitalize()
-
+# 최종 파일 중복 제거
+def _dedupe_file_inplace(path):
+    with open(path, 'r') as f:
+        lines = f.read().splitlines()
+    unique_lines = list(OrderedDict.fromkeys(lines))
+    if len(unique_lines) != len(lines):
+        with open(path, 'w') as f:
+            f.write("\n".join(unique_lines))
+    return len(lines), len(unique_lines)
 
 def main():
-
-    # 사용자가 입력한 인자 핸들링
+    # 인자
     input, output, extNumber, extChar = getArgs()
-
-    # 사용자가 입력한 필수 인자 누락 여부 검사
+    # 옵션 검증
     checkOptions(input, output, extNumber, extChar)
 
-    # 사용자가 인자로 넣은 파일에서 공백을 기준으로 리스트 생성
+    # 이름 파일 파싱 → 기본 워드리스트
     splitNameList = splitName(input) if input is not None else []
-
-    # 생성한 리스트를 기반으로 기본 워드리스트 양식 생성
     wordlist = []
     for part in splitNameList:
         wordlist.extend(makePasswordList(part))
+    wordlist = _unique(wordlist)
 
-    # 자주 사용되는 패스워드 목록
-    easyPasswords = [
-        'q1w2e3r4',     'qwer1234!',    'password123!',     'Password123!',     '1q2w3e4r', 
-        'qwerty123',    '111111',       '12341234',         'qwer!@34',         'qwer12!@',
-        '1q2w3e4r#',    'q1w2e3r4@',    'qwer1234@',        '1q2w3e4r!',        '1111',
-        '1234',         'asdf1234',     '1q2w3e',           'q1w2e3',           '12345'       
-        ]
+    # 쉬운 베이스
+    easyCharactors = [
+        'q1w2e3r4', 'qwer', 'qwe', 'qwqw', 'qwqwqw', 'qweqwe', 'qweqweqwe', 'passwd',
+        'password', 'P@ssw0rd', 'asd', 'asdf', '1q2w3e4r', 'q1w2e3', '1q2w3e', 'q1w2', '1q2w'
+    ]
 
-    # 완성된 목록을 파일로 스트리밍 저장 (마지막 줄 개행 없음)
+    # 스트리밍 저장(+실시간 중복 제거)
     with open(output, 'w') as file:
         first = True
-        def _write_line(s):
-            nonlocal first
-            if first:
-                file.write(s)
-                first = False
-            else:
-                file.write("\n")
-                file.write(s)
+        seen = set()
 
-        # 워드리스트에 더할 숫자와 특수문자 추가(스트리밍)
+        def _write_line(s):
+            nonlocal first, seen
+            if s in seen:
+                return
+            seen.add(s)
+            if first:
+                file.write(s); first = False
+            else:
+                file.write("\n"); file.write(s)
+
+        # 이름 기반 생성
         for pw in addPattern(wordlist, extNumber):
             _write_line(pw)
 
-        # easyPasswords 스트리밍
-        for pw in easyPasswords:
+        # 쉬운 베이스 생성
+        for pw in makeEasyPasswordList(easyCharactors):
             _write_line(pw)
-        
-        # 사용자가 추가로 지정한 회사 이름 등의 문자열 리스트 생성(스트리밍)
+
+        # -c 토큰 생성
         if extChar is not None:
-            tokens = extChar if isinstance(extChar, list) else [extChar]
-            # (추가) 토큰 자체(원형/대문자/첫글자 대문자)도 포함
-            for token in tokens:
-                _write_line(token)
-                _write_line(token.upper())
-                _write_line(token.capitalize())
             for pw in makeExtCharWordlist(extChar, extNumber):
                 _write_line(pw)
 
-    print(f'[*] password generator v0.5.0 - Copyright 2025 All rights reserved by mick3y')
-    print(f'[+] Success generating user password list')
+    # 최종 dedupe
+    raw_count, uniq_count = _dedupe_file_inplace(output)
+
+    print('[*] password generator v0.5.2 - Copyright 2025 All rights reserved by mick3y')
+    print('[+] Success generating user password list')
     print(f'[+] output file : {output}')
+    print(f'[i] lines(raw/unique/removed): {raw_count} / {uniq_count} / {raw_count - uniq_count}')
 
 if __name__ == "__main__":
     main()
