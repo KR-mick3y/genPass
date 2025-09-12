@@ -109,7 +109,7 @@ def printError(case, filename):
 # 인자 핸들링
 def getArgs():
     parser = argparse.ArgumentParser(
-        description="password generator v0.5.2",
+        description="password generator v0.5.3",
         epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",
     )
     parser.add_argument("-f", "--file", required=False, help="Input file that has usernames")
@@ -185,32 +185,51 @@ def makePasswordList(lst):
         enFirst, enMiddle, enLast = lst[0], lst[1], lst[2]
         koFirst, koMiddle, koLast = lst[3], lst[4], lst[5]
         result.extend([
-            enFirst + enMiddle + enLast,
-            enFirst.capitalize() + enMiddle + enLast,
-            enFirst.capitalize() + enMiddle.capitalize() + enLast.capitalize(),
-            koFirst + koMiddle + koLast,
-            koFirst.capitalize() + koMiddle + koLast,
-            koFirst.capitalize() + koMiddle.capitalize() + koLast.capitalize(),
-            enMiddle + enLast,
-            enMiddle.capitalize() + enLast,
-            koMiddle + koLast,
-            koMiddle.capitalize() + koLast,
-            koMiddle.upper() + koLast,
-            enFirst,
-            enFirst.capitalize(),
-            enMiddle,
-            enMiddle.capitalize(),
-            enLast,
-            enLast.capitalize(),
-            koFirst,
-            koFirst.capitalize(),
-            koMiddle,
-            koMiddle.capitalize(),
-            koLast,
-            koLast.capitalize(),
-            enFirst[0] + enMiddle[0] + enLast[0],
-            enFirst[0].upper() + enMiddle[0].upper() + enLast[0].upper(),
-            enFirst[0].upper() + enMiddle[0] + enLast[0]
+            enFirst[0] + enMiddle[0] + enLast[0],                               # pyw
+            enFirst[0].upper() + enMiddle[0].upper() + enLast[0].upper(),       # PYW
+            enFirst[0].upper() + enMiddle[0] + enLast[0],                       # Pyw
+            enFirst + enMiddle + enLast,                                        # parkyeonwoo
+            enFirst.capitalize() + enMiddle + enLast,                           # Parkyeonwoo
+            enFirst.capitalize() + enMiddle.capitalize() + enLast.capitalize(), # ParkYeonWoo
+            enFirst.upper() + enMiddle + enLast,                                # PARKyeonwoo
+            enFirst.upper() + enMiddle.upper() + enLast.upper(),                # PARKYEONWOO
+            enFirst[0] + enMiddle + enLast,                                     # pyeonwoo
+            enFirst[0].upper() + enMiddle + enLast,                             # Pyeonwoo  
+            enFirst[0].upper() + enMiddle.capitalize() + enLast,                # PYeonwoo  
+            enFirst[0].upper() + enMiddle.capitalize() + enLast.capitalize(),   # PYeonWoo  
+            enFirst[0].upper() + enMiddle.upper() + enLast,                     # PYEONwoo
+            enFirst[0].upper() + enMiddle.upper() + enLast.upper(),             # PYEONWOO
+            enFirst + enMiddle[0] + enLast[0],                                  # parkyw
+            enFirst.capitalize() + enMiddle[0] + enLast[0],                     # Parkyw
+            enFirst + enMiddle[0].upper() + enLast,                             # parkYw
+            enFirst.capitalize() + enMiddle[0].upper() + enLast[0].upper(),       # ParkYW
+            enFirst.upper() + enMiddle[0] + enLast[0],                          # PARKyw
+            enFirst.upper() + enMiddle.upper() + enLast.upper(),                # PARKYW
+            enMiddle + enLast,                                                  # yeonwoo
+            enMiddle.capitalize() + enLast,                                     # Yeonwoo
+            enMiddle.capitalize() + enLast.capitalize(),                        # YeonWoo
+            enMiddle.upper() + enLast,                                          # YEONwoo
+            enMiddle.upper() + enLast.upper(),                                  # YEONWOO
+            enMiddle[0] + enLast,                                               # ywoo
+            enMiddle[0].upper() + enLast,                                       # Ywoo
+            enFirst,                                                            # park
+            enFirst.capitalize(),                                               # Park
+            enMiddle,                                                           # yeon
+            enMiddle.capitalize(),                                              # Yeon
+            enLast,                                                             # woo
+            enLast.capitalize(),                                                # Woo
+            koFirst + koMiddle + koLast,                                        # qkrdusdn
+            koFirst.capitalize() + koMiddle + koLast,                           # Qkrdusdn
+            koFirst.capitalize() + koMiddle.capitalize() + koLast.capitalize(), # QkrDusDn
+            koMiddle + koLast,                                                  # dusdn
+            koMiddle.capitalize() + koLast,                                     # Dusdn
+            koMiddle.upper() + koLast,                                          # DUSdn
+            koFirst,                                                            # qkr
+            koFirst.capitalize(),                                               # Qkr
+            koMiddle,                                                           # dus
+            koMiddle.capitalize(),                                              # Dus
+            koLast,                                                             # dn
+            koLast.capitalize(),                                                # Dn
         ])
     else:
         printError(3, "(input)")
@@ -305,10 +324,9 @@ def main():
     # 최종 dedupe
     raw_count, uniq_count = _dedupe_file_inplace(output)
 
-    print('[*] password generator v0.5.2 - Copyright 2025 All rights reserved by mick3y')
+    print('[*] password generator v0.5.3 - Copyright 2025 All rights reserved by mick3y')
     print('[+] Success generating user password list')
     print(f'[+] output file : {output}')
-    print(f'[i] lines(raw/unique/removed): {raw_count} / {uniq_count} / {raw_count - uniq_count}')
 
 if __name__ == "__main__":
     main()
