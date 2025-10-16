@@ -2,31 +2,36 @@ import argparse
 import sys
 from collections import OrderedDict
 
-# 특수문자 패턴 (전역)
-allCharacters = [
+# =========================
+# v0.5.4 (light mode added)
+# =========================
+
+# 특수문자 원본 집합
+ALL_CHARACTERS = [
     '!', '@', '#', '$', '%', '^',
     '&', '*', '_', '-', '+', '=',
     '.', '(', ')', ';', ':', '~'
 ]
-characters = []
-commonCharacters = [
+# 흔한 특수문자 시퀀스
+COMMON_CHARACTERS = [
     '!@#', '@#$', '#$%', '$%^', '%^&', '^&*',
     '!@', '@#', '#$', '$%', '%^', '^&',
     '#@!', '$#@', '%#$', '^$%', '&^%', '*&^'
 ]
-for c in allCharacters:
-    characters.append(c)
-    characters.append(c * 2)
-    characters.append(c * 3)
-characters = characters + commonCharacters  # 구성상 중복 없음
 
-# 이름 기반 기본 숫자 패턴
-base_digits = [
+# 기본(풀) 모드용 숫자 패턴(기존 유지)
+BASE_DIGITS_DEFAULT = [
     '1', '11', '111', '1111', '2', '22', '12', '1212',
     '123', '123123', '12312', '1234', '1324', '123412',
     '1100', '1004', '23', '234', '12345', '10', '100'
 ]
+# 라이트 모드 숫자 패턴(요청사항)
+BASE_DIGITS_LIGHT = ['1', '12', '11', '123', '1234', '1111']
 
+# 전역 상태 (런타임에서 설정)
+characters = []        # _expand()가 참조
+base_digits = list(BASE_DIGITS_DEFAULT)
+LIGHT_MODE = False     # 라이트 모드 플래그
 
 # 순서 보존 중복 제거
 def _unique(seq):
@@ -62,6 +67,7 @@ def _normalize_tokens(extChar):
 
 # 문자(w), 숫자(d), 특수문자(c) 조합 생성
 def _expand(wordlist, digits, include_plain_word):
+    # 전역 characters, digits 사용
     words = _unique(wordlist)
     digits = _unique(digits)
 
@@ -93,7 +99,6 @@ def _expand(wordlist, digits, include_plain_word):
                 yield c + w + d
                 yield c + d + w
 
-
 # 에러 출력 함수
 def printError(case, filename):
     if case == 1:
@@ -109,15 +114,17 @@ def printError(case, filename):
 # 인자 핸들링
 def getArgs():
     parser = argparse.ArgumentParser(
-        description="password generator v0.5.3",
-        epilog="[Example] genPass.py -f users.txt -o passlist.txt -c $$$,&&&",
+        description="password generator v0.5.4",
+        epilog="[Example] genPass.py -f users.txt -o passlist.txt --light -c $$$,&&&",
     )
     parser.add_argument("-f", "--file", required=False, help="Input file that has usernames")
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
     parser.add_argument("-n", "--number", type=lambda s: s.split(','), help="Use extra number", default=None)
     parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
+    parser.add_argument("-L", "--light", action="store_true",
+                        help="Generate a lightweight list (no repeated special chars; limited digits)")
     args = parser.parse_args()
-    return args.file, args.output, args.number, args.char
+    return args.file, args.output, args.number, args.char, args.light
 
 # 옵션/입력 검증
 def checkOptions(input, output, extNumber, extChar):
@@ -194,15 +201,15 @@ def makePasswordList(lst):
             enFirst.upper() + enMiddle + enLast,                                # PARKyeonwoo
             enFirst.upper() + enMiddle.upper() + enLast.upper(),                # PARKYEONWOO
             enFirst[0] + enMiddle + enLast,                                     # pyeonwoo
-            enFirst[0].upper() + enMiddle + enLast,                             # Pyeonwoo  
-            enFirst[0].upper() + enMiddle.capitalize() + enLast,                # PYeonwoo  
-            enFirst[0].upper() + enMiddle.capitalize() + enLast.capitalize(),   # PYeonWoo  
+            enFirst[0].upper() + enMiddle + enLast,                             # Pyeonwoo
+            enFirst[0].upper() + enMiddle.capitalize() + enLast,                # PYeonwoo
+            enFirst[0].upper() + enMiddle.capitalize() + enLast.capitalize(),   # PYeonWoo
             enFirst[0].upper() + enMiddle.upper() + enLast,                     # PYEONwoo
             enFirst[0].upper() + enMiddle.upper() + enLast.upper(),             # PYEONWOO
             enFirst + enMiddle[0] + enLast[0],                                  # parkyw
             enFirst.capitalize() + enMiddle[0] + enLast[0],                     # Parkyw
             enFirst + enMiddle[0].upper() + enLast,                             # parkYw
-            enFirst.capitalize() + enMiddle[0].upper() + enLast[0].upper(),       # ParkYW
+            enFirst.capitalize() + enMiddle[0].upper() + enLast[0].upper(),     # ParkYW
             enFirst.upper() + enMiddle[0] + enLast[0],                          # PARKyw
             enFirst.upper() + enMiddle.upper() + enLast.upper(),                # PARKYW
             enMiddle + enLast,                                                  # yeonwoo
@@ -241,25 +248,19 @@ def addPattern(wordlist, extNumber):
     digits = _normalize_digits(base_digits, extNumber)
     return _expand(wordlist, digits, include_plain_word=True)
 
-# 쉬운 패스워드 베이스 + 패턴
-def makeEasyPasswordList(wordlist):
-    digits = [
-        '1', '11', '111', '1111', '2', '22', '222', '12', '1212',
-        '34', '23', '234', '123', '1234', '1324', '1100', '1004', '12345', '10', '100'
-    ]
-    wl = wordlist if isinstance(wordlist, list) else [wordlist]
-    wl = _unique(wl)
-    # easy는 단독 문자열은 제외(조합만)
-    return _expand(wl, digits, include_plain_word=False)
-
 # -c 토큰 + 패턴
 def makeExtCharWordlist(extChar, extNumber=None):
-    digits = [
-        '1', '11', '111', '1111', '2', '22', '222', '12', '1212',
-        '34', '23', '234', '123', '1234', '1324', '1100', '1004', '12345', '10', '100',
-        '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'
-    ]
-    digits = _normalize_digits(digits, extNumber)
+    # 라이트 모드에서는 축소된 숫자 집합 사용
+    if LIGHT_MODE:
+        digits_base = list(BASE_DIGITS_LIGHT)
+    else:
+        # 기존 동작 유지(연도 포함)
+        digits_base = [
+            '1', '11', '111', '1111', '2', '22', '222', '12', '1212',
+            '34', '23', '234', '123', '1234', '1324', '1100', '1004', '12345', '10', '100',
+            '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'
+        ]
+    digits = _normalize_digits(digits_base, extNumber)
     variants = _normalize_tokens(extChar)
     # -c도 단독 문자열은 제외(조합만)
     return _expand(variants, digits, include_plain_word=False)
@@ -274,11 +275,32 @@ def _dedupe_file_inplace(path):
             f.write("\n".join(unique_lines))
     return len(lines), len(unique_lines)
 
+def build_characters(light):
+    """
+    light=True  -> ALL_CHARACTERS + COMMON_CHARACTERS (반복 없음)
+    light=False -> 각 문자에 대해 1/2/3번 반복 + COMMON_CHARACTERS
+    """
+    if light:
+        return list(ALL_CHARACTERS) + list(COMMON_CHARACTERS)
+    out = []
+    for c in ALL_CHARACTERS:
+        out.append(c)
+        out.append(c * 2)
+        out.append(c * 3)
+    return out + list(COMMON_CHARACTERS)
+
 def main():
+    global LIGHT_MODE, characters, base_digits
+
     # 인자
-    input, output, extNumber, extChar = getArgs()
+    input, output, extNumber, extChar, LIGHT_MODE = getArgs()
+
     # 옵션 검증
     checkOptions(input, output, extNumber, extChar)
+
+    # 전역 문자/숫자 패턴 구성
+    characters = build_characters(LIGHT_MODE)
+    base_digits = list(BASE_DIGITS_LIGHT) if LIGHT_MODE else list(BASE_DIGITS_DEFAULT)
 
     # 이름 파일 파싱 → 기본 워드리스트
     splitNameList = splitName(input) if input is not None else []
@@ -286,12 +308,6 @@ def main():
     for part in splitNameList:
         wordlist.extend(makePasswordList(part))
     wordlist = _unique(wordlist)
-
-    # 쉬운 베이스
-    easyCharactors = [
-        'q1w2e3r4', 'qwer', 'qwe', 'qwqw', 'qwqwqw', 'qweqwe', 'qweqweqwe', 'passwd',
-        'password', 'P@ssw0rd', 'asd', 'asdf', '1q2w3e4r', 'q1w2e3', '1q2w3e', 'q1w2', '1q2w'
-    ]
 
     # 스트리밍 저장(+실시간 중복 제거)
     with open(output, 'w') as file:
@@ -308,15 +324,23 @@ def main():
             else:
                 file.write("\n"); file.write(s)
 
-        # 이름 기반 생성
+        # 이름 기반 생성(라이트/풀 공통)
         for pw in addPattern(wordlist, extNumber):
             _write_line(pw)
 
-        # 쉬운 베이스 생성
-        for pw in makeEasyPasswordList(easyCharactors):
-            _write_line(pw)
+        # 라이트 모드에서는 "쉬운 베이스"를 완전히 제거
+        # (풀 모드에서만 기존 easy 추가를 유지하려면 아래 블록을 활성화)
+        if not LIGHT_MODE:
+            easyCharactors = [
+                'q1w2e3r4', 'qwer', 'qwe', 'qwqw', 'qwqwqw', 'qweqwe', 'qweqweqwe', 'passwd',
+                'password', 'P@ssw0rd', 'asd', 'asdf', '1q2w3e4r', 'q1w2e3', '1q2w3e', 'q1w2', '1q2w'
+            ]
+            for pw in _expand(_unique(easyCharactors),
+                              _unique(['1','11','111','1111','2','22','222','12','1212','34','23','234','123','1234','1324','1100','1004','12345','10','100']),
+                              include_plain_word=False):
+                _write_line(pw)
 
-        # -c 토큰 생성
+        # -c 토큰 생성 (라이트 모드에서도 숫자/문자 축소 규칙 적용)
         if extChar is not None:
             for pw in makeExtCharWordlist(extChar, extNumber):
                 _write_line(pw)
@@ -324,9 +348,11 @@ def main():
     # 최종 dedupe
     raw_count, uniq_count = _dedupe_file_inplace(output)
 
-    print('[*] password generator v0.5.3 - Copyright 2025 All rights reserved by mick3y')
-    print('[+] Success generating user password list')
-    print(f'[+] output file : {output}')
+    mode = "LIGHT" if LIGHT_MODE else "FULL"
+    print('[*] password generator v0.5.4 - Copyright 2025 All rights reserved by mick3y')
+    print(f'[+] Mode            : {mode}')
+    print(f'[+] output file     : {output}')
+    print(f'[+] total candidates: {uniq_count} (raw: {raw_count})')
 
 if __name__ == "__main__":
     main()
