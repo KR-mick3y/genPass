@@ -336,7 +336,7 @@ def main():
     raw_count, uniq_count = _dedupe_file_inplace(output)
 
     mode = "LIGHT" if LIGHT_MODE else "FULL"
-    print('[*] password generator v0.5.5 - Copyright 2025 All rights reserved by mick3y')
+    print('[*] password generator v0.5.5 - Copyright 2025 mick3y')
     print(f'[+] Mode            : {mode}')
     print(f'[+] output file     : {output}')
     print(f'[+] total candidates: {uniq_count} (raw: {raw_count})')
