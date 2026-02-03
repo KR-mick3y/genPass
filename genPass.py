@@ -3,13 +3,34 @@ import sys
 from collections import OrderedDict
 
 # =========================
-# v0.5.5 (light mode: w-first)
+# v0.6.0 (added -k keywords)
 # =========================
 
 ALL_CHARACTERS = [
     '!', '@', '#', '$', '%', '^',
     '&', '*', '_', '-', '+', '=',
     '.', '(', ')', ';', ':', '~'
+]
+
+# 관리자/시스템 키워드 기반 패턴
+ADMIN_KEYWORDS = [
+    'test', 'Test', 'TEST',
+    'admin', 'Admin', 'ADMIN',
+    'super', 'Super', 'SUPER',
+    'master', 'Master', 'MASTER',
+    'dev', 'Dev', 'DEV',
+    'root', 'Root', 'ROOT',
+    'user', 'User', 'USER',
+    'guest', 'Guest', 'GUEST',
+    'administrator', 'Administrator', 'ADMINISTRATOR',
+    'manager', 'Manager', 'MANAGER',
+    'system', 'System', 'SYSTEM',
+    'service', 'Service', 'SERVICE',
+    'backup', 'Backup', 'BACKUP',
+    'oracle', 'Oracle', 'ORACLE',
+    'mysql', 'Mysql', 'MYSQL',
+    'postgres', 'Postgres', 'POSTGRES',
+    'sa', 'SA', 'dba', 'DBA',
 ]
 COMMON_CHARACTERS = [
     '!@#', '@#$', '#$%', '$%^', '%^&', '^&*',
@@ -122,8 +143,8 @@ def printError(case, filename):
 
 def getArgs():
     parser = argparse.ArgumentParser(
-        description="password generator v0.5.5",
-        epilog="[Example] genPass.py -f users.txt -o passlist.txt --light -c $$$,&&&",
+        description="password generator v0.6.0",
+        epilog="[Example] genPass.py -k -o passlist.txt  |  genPass.py -f users.txt -o passlist.txt -k -c company",
     )
     parser.add_argument("-f", "--file", required=False, help="Input file that has usernames")
     parser.add_argument("-o", "--output", required=True, help="Output file you want to save")
@@ -131,11 +152,13 @@ def getArgs():
     parser.add_argument("-c", "--char", type=lambda s: s.split(','), help="Use extra character", default=None)
     parser.add_argument("-L", "--light", action="store_true",
                         help="Generate a lightweight list (w-first only; limited digits; no easy base)")
+    parser.add_argument("-k", "--keywords", action="store_true",
+                        help="Include admin/system keyword patterns (test, admin, root, etc.)")
     args = parser.parse_args()
-    return args.file, args.output, args.number, args.char, args.light
+    return args.file, args.output, args.number, args.char, args.light, args.keywords
 
-def checkOptions(input, output, extNumber, extChar):
-    if input is None and (extChar is None or len(extChar) == 0):
+def checkOptions(input, output, extNumber, extChar, useKeywords=False):
+    if input is None and (extChar is None or len(extChar) == 0) and not useKeywords:
         printError(1, input)
     if output is None:
         printError(2, input)
@@ -287,8 +310,8 @@ def build_characters(light):
 def main():
     global LIGHT_MODE, characters, base_digits
 
-    input, output, extNumber, extChar, LIGHT_MODE = getArgs()
-    checkOptions(input, output, extNumber, extChar)
+    input, output, extNumber, extChar, LIGHT_MODE, useKeywords = getArgs()
+    checkOptions(input, output, extNumber, extChar, useKeywords)
 
     characters = build_characters(LIGHT_MODE)
     base_digits = list(BASE_DIGITS_LIGHT) if LIGHT_MODE else list(BASE_DIGITS_DEFAULT)
@@ -333,11 +356,19 @@ def main():
             for pw in makeExtCharWordlist(extChar, extNumber):
                 _write_line(pw)
 
+        # 키워드 기반 패턴 생성 (-k 옵션)
+        if useKeywords:
+            keyword_digits = _normalize_digits(base_digits, extNumber)
+            for pw in _expand(ADMIN_KEYWORDS, keyword_digits, include_plain_word=True):
+                _write_line(pw)
+
     raw_count, uniq_count = _dedupe_file_inplace(output)
 
     mode = "LIGHT" if LIGHT_MODE else "FULL"
-    print('[*] password generator v0.5.5 - Copyright 2025 mick3y')
+    kw_status = "ON" if useKeywords else "OFF"
+    print('[*] password generator v0.6.0 - Copyright 2025 mick3y')
     print(f'[+] Mode            : {mode}')
+    print(f'[+] Keywords        : {kw_status}')
     print(f'[+] output file     : {output}')
     print(f'[+] total candidates: {uniq_count} (raw: {raw_count})')
 
