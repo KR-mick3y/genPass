@@ -3,7 +3,7 @@ import sys
 from collections import OrderedDict
 
 # =========================
-# v0.6.0 (added -k keywords)
+# v0.7.0 (added -k keywords)
 # =========================
 
 ALL_CHARACTERS = [
@@ -36,6 +36,24 @@ COMMON_CHARACTERS = [
     '!@#', '@#$', '#$%', '$%^', '%^&', '^&*',
     '!@', '@#', '#$', '$%', '%^', '^&',
     '#@!', '$#@', '%#$', '^$%', '&^%', '*&^'
+]
+
+EASY_CHARACTERS = [
+    'q1w2e3r4', 'qwer', 'qwe', 'qwqw', 'qwqwqw', 'qweqwe', 'qweqweqwe', 'passwd',
+    'password', 'P@ssw0rd', 'asd', 'asdf', '1q2w3e4r', 'q1w2e3', '1q2w3e', 'q1w2', '1q2w'
+]
+
+# Reusable symbol tails learned from prior samples. Concrete personal digits
+# from the samples are intentionally excluded.
+OBSERVED_SPECIAL_CHARACTERS = [
+    "!!", "!!!", "!@", "!@#", "!@&", "#@!", "@#", "@#$", "@@", "@@@",
+    "##", "#$", "#$%", "$#", "$#@!", "$$", "%%", "^^", "&&", "**",
+    "***", "**!!", "!!**", "++", "//", "..", "??", "((", ")&", "^*",
+    "#!", "#*", "?@@",
+]
+
+OBSERVED_SIMPLE_DIGITS = [
+    "0", "222", "34", "77", "88", "1232",
 ]
 
 BASE_DIGITS_DEFAULT = [
@@ -143,7 +161,7 @@ def printError(case, filename):
 
 def getArgs():
     parser = argparse.ArgumentParser(
-        description="password generator v0.6.0",
+        description="password generator v0.7.0",
         epilog="[Example] genPass.py -k -o passlist.txt  |  genPass.py -f users.txt -o passlist.txt -k -c company",
     )
     parser.add_argument("-f", "--file", required=False, help="Input file that has usernames")
@@ -284,6 +302,7 @@ def makeExtCharWordlist(extChar, extNumber=None):
             '34', '23', '234', '123', '1234', '1324', '1100', '1004', '12345', '10', '100',
             '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'
         ]
+    digits_base = _unique(digits_base + OBSERVED_SIMPLE_DIGITS)
     digits = _normalize_digits(digits_base, extNumber)
     variants = _normalize_tokens(extChar)
     return _expand(variants, digits, include_plain_word=False)
@@ -297,15 +316,15 @@ def _dedupe_file_inplace(path):
             f.write("\n".join(unique_lines))
     return len(lines), len(unique_lines)
 
-def build_characters(light):
+def build_characters(light, use_keywords=False):
     if light:
-        return list(ALL_CHARACTERS) + list(COMMON_CHARACTERS)
+        return _unique(list(ALL_CHARACTERS) + list(COMMON_CHARACTERS) + list(OBSERVED_SPECIAL_CHARACTERS))
     out = []
     for c in ALL_CHARACTERS:
         out.append(c)
         out.append(c * 2)
         out.append(c * 3)
-    return out + list(COMMON_CHARACTERS)
+    return _unique(out + list(COMMON_CHARACTERS) + list(OBSERVED_SPECIAL_CHARACTERS))
 
 def main():
     global LIGHT_MODE, characters, base_digits
@@ -313,8 +332,9 @@ def main():
     input, output, extNumber, extChar, LIGHT_MODE, useKeywords = getArgs()
     checkOptions(input, output, extNumber, extChar, useKeywords)
 
-    characters = build_characters(LIGHT_MODE)
+    characters = build_characters(LIGHT_MODE, useKeywords)
     base_digits = list(BASE_DIGITS_LIGHT) if LIGHT_MODE else list(BASE_DIGITS_DEFAULT)
+    base_digits = _unique(base_digits + OBSERVED_SIMPLE_DIGITS)
 
     splitNameList = splitName(input) if input is not None else []
     wordlist = []
@@ -339,14 +359,10 @@ def main():
         for pw in addPattern(wordlist, extNumber):
             _write_line(pw)
 
-        # FULL 모드에서만 기존 easy 베이스 유지 (LIGHT 모드는 완전 제외)
-        if not LIGHT_MODE:
-            easyCharactors = [
-                'q1w2e3r4', 'qwer', 'qwe', 'qwqw', 'qwqwqw', 'qweqwe', 'qweqweqwe', 'passwd',
-                'password', 'P@ssw0rd', 'asd', 'asdf', '1q2w3e4r', 'q1w2e3', '1q2w3e', 'q1w2', '1q2w'
-            ]
+        # Common/easy keywords such as qwer are generated only with -k.
+        if useKeywords and not LIGHT_MODE:
             for pw in _expand(
-                _unique(easyCharactors),
+                _unique(EASY_CHARACTERS),
                 _unique(['1','11','111','1111','2','22','222','12','1212','34','23','234','123','1234','1324','1100','1004','12345','10','100']),
                 include_plain_word=False
             ):
@@ -366,9 +382,10 @@ def main():
 
     mode = "LIGHT" if LIGHT_MODE else "FULL"
     kw_status = "ON" if useKeywords else "OFF"
-    print('[*] password generator v0.6.0 - Copyright 2025 mick3y')
+    print('[*] password generator v0.7.0 - Copyright 2025 mick3y')
     print(f'[+] Mode            : {mode}')
     print(f'[+] Keywords        : {kw_status}')
+    print(f'[+] Learned symbols : {len(OBSERVED_SPECIAL_CHARACTERS)}')
     print(f'[+] output file     : {output}')
     print(f'[+] total candidates: {uniq_count} (raw: {raw_count})')
 
