@@ -3,7 +3,7 @@ import sys
 from collections import OrderedDict
 
 # =========================
-# v0.7.0 (added -k keywords)
+# v0.7.1 (added -k keywords)
 # =========================
 
 ALL_CHARACTERS = [
@@ -161,7 +161,7 @@ def printError(case, filename):
 
 def getArgs():
     parser = argparse.ArgumentParser(
-        description="password generator v0.7.0",
+        description="password generator v0.7.1",
         epilog="[Example] genPass.py -k -o passlist.txt  |  genPass.py -f users.txt -o passlist.txt -k -c company",
     )
     parser.add_argument("-f", "--file", required=False, help="Input file that has usernames")
@@ -360,11 +360,13 @@ def main():
             _write_line(pw)
 
         # Common/easy keywords such as qwer are generated only with -k.
+        # Keep the entries themselves as candidates too (for example,
+        # ``P@ssw0rd``), not only their digit/symbol combinations.
         if useKeywords and not LIGHT_MODE:
             for pw in _expand(
                 _unique(EASY_CHARACTERS),
                 _unique(['1','11','111','1111','2','22','222','12','1212','34','23','234','123','1234','1324','1100','1004','12345','10','100']),
-                include_plain_word=False
+                include_plain_word=True
             ):
                 _write_line(pw)
 
@@ -382,7 +384,7 @@ def main():
 
     mode = "LIGHT" if LIGHT_MODE else "FULL"
     kw_status = "ON" if useKeywords else "OFF"
-    print('[*] password generator v0.7.0 - Copyright 2025 mick3y')
+    print('[*] password generator v0.7.1 - Copyright 2025 mick3y')
     print(f'[+] Mode            : {mode}')
     print(f'[+] Keywords        : {kw_status}')
     print(f'[+] Learned symbols : {len(OBSERVED_SPECIAL_CHARACTERS)}')
